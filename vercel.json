@@ -4,7 +4,7 @@
     "rewrites": [
         {
             "source": "/api/(.*)",
-            "destination": "/api/analyze"
+            "destination": "/api/index"
         },
         {
             "source": "/(.*)",
