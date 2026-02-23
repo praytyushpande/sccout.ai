@@ -1,0 +1,6 @@
+# Ignore root Python files from being treated as serverless functions
+server.py
+recruitment_agent_gemini.py
+__pycache__/
+venv/
+.env
