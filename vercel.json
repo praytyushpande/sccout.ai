@@ -4,7 +4,11 @@
     "rewrites": [
         {
             "source": "/api/(.*)",
-            "destination": "/api/analyze.py"
+            "destination": "/api/analyze"
+        },
+        {
+            "source": "/(.*)",
+            "destination": "/index.html"
         }
     ],
     "functions": {

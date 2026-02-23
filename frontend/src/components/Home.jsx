@@ -29,8 +29,7 @@ function Home() {
     setData(null);
 
     try {
-      // Assuming backend is running on localhost:8000
-      const response = await axios.post('http://localhost:8000/api/analyze', {
+      const response = await axios.post('/api/analyze', {
         description: jobDescription
       });
       setData(response.data);
