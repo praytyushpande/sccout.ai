@@ -1,26 +1,31 @@
+import sys
+import os
+
+# Add the project root to sys.path so we can import our modules
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
-import uvicorn
 from dotenv import load_dotenv
 from recruitment_agent_gemini import run_recruitment_agent
 from fastapi.middleware.cors import CORSMiddleware
-import os
 
 load_dotenv()
 
 app = FastAPI()
 
-# Enable CORS for frontend
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Allow all origins for dev; specify in prod
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
+
 class JobDescriptionRequest(BaseModel):
     description: str
+
 
 class Candidate(BaseModel):
     title: str
@@ -34,10 +39,12 @@ class Candidate(BaseModel):
     reason: str = None
     image: str = None
 
+
 class AnalysisResponse(BaseModel):
     analysis_report: str
     candidates: list[Candidate]
     stdout_log: str = ""
+
 
 @app.post("/api/analyze", response_model=AnalysisResponse)
 async def analyze_job(request: JobDescriptionRequest):
@@ -48,7 +55,6 @@ async def analyze_job(request: JobDescriptionRequest):
 
         result = await run_recruitment_agent(job_desc)
 
-        # Process results to match frontend expectations
         candidates_data = []
         search_results = result.get("search_results", [])
 
@@ -76,6 +82,3 @@ async def analyze_job(request: JobDescriptionRequest):
         import traceback
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=str(e))
-
-if __name__ == "__main__":
-    uvicorn.run(app, host="0.0.0.0", port=8000)

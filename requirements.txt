@@ -3,7 +3,5 @@ uvicorn>=0.29.0
 python-dotenv==1.0.1
 requests==2.32.5
 beautifulsoup4==4.14.3
-google-generativeai
-langchain-core
-langgraph
+google-genai>=1.0.0
 tavily-python==0.7.19
