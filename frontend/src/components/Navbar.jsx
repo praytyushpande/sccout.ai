@@ -46,18 +46,9 @@ const Navbar = () => {
             >
                 {/* Logo */}
                 <Link to="/" style={{ textDecoration: 'none', color: 'inherit' }} onClick={handleNavClick}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                        <div style={{
-                            width: '12px',
-                            height: '12px',
-                            background: '#6366f1',
-                            borderRadius: '50%',
-                            boxShadow: '0 0 20px #6366f1'
-                        }} />
-                        <span style={{ fontSize: '1.5rem', fontWeight: '700', letterSpacing: '-1px' }}>
-                            ScoutAI
-                        </span>
-                    </div>
+                    <span style={{ fontSize: '1.5rem', fontWeight: '700', letterSpacing: '-1px' }}>
+                        ScoutAI
+                    </span>
                 </Link>
 
                 {/* Desktop Nav Links - Glass Pill */}
