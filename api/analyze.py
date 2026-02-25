@@ -101,20 +101,59 @@ def search_job_candidates(query: str) -> list[dict]:
     """Search for potential job candidates using Tavily, then score with Gemini."""
     print(f"Searching for candidates with query: {query}")
 
+    # The search template adds ~130 chars of overhead, so we have ~270 chars for the query.
+    # If the user's query is long, use Gemini to extract concise search keywords first.
+    MAX_QUERY_CHARS = 250
+    condensed_query = query
+
+    if len(query) > MAX_QUERY_CHARS:
+        try:
+            keyword_prompt = (
+                f"Extract the most important job-related keywords from this description. "
+                f"Return ONLY a short comma-separated list of keywords (max 200 characters total), "
+                f"no explanation:\n\n{query}"
+            )
+            condensed_query = _call_gemini(keyword_prompt).strip()
+            # Safety: hard-truncate if Gemini still returns too much
+            if len(condensed_query) > MAX_QUERY_CHARS:
+                condensed_query = condensed_query[:MAX_QUERY_CHARS]
+            print(f"Condensed query to: {condensed_query}")
+        except Exception as e:
+            print(f"Failed to condense query with Gemini, truncating: {e}")
+            condensed_query = query[:MAX_QUERY_CHARS]
+
     search_query = (
-        f"site:linkedin.com/in {query} "
+        f"site:linkedin.com/in {condensed_query} "
         "-intitle:'job description' -intitle:'career' -intitle:'company' "
         "-intitle:'blog' -intitle:'article' -intitle:'jobs'"
     )
 
-    response = tavily_client.search(
-        query=search_query,
-        max_results=10,
-        search_depth="advanced",
-        include_answer=False,
-        include_raw_content=True,
-        include_images=True
-    )
+    try:
+        response = tavily_client.search(
+            query=search_query,
+            max_results=10,
+            search_depth="advanced",
+            include_answer=False,
+            include_raw_content=True,
+            include_images=True
+        )
+    except Exception as e:
+        error_str = str(e)
+        if "too long" in error_str.lower() or "400" in error_str:
+            # Last resort: use only the first few words
+            words = query.split()[:10]
+            fallback_query = f"site:linkedin.com/in {' '.join(words)}"
+            print(f"Query still too long, using fallback: {fallback_query}")
+            response = tavily_client.search(
+                query=fallback_query,
+                max_results=10,
+                search_depth="advanced",
+                include_answer=False,
+                include_raw_content=True,
+                include_images=True
+            )
+        else:
+            raise
 
     candidates_to_score = []
     for result in response['results']:
