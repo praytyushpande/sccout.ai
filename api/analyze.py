@@ -1,6 +1,8 @@
 import os
 import json
 import time
+import re
+import random
 import requests
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
@@ -95,6 +97,91 @@ def _call_gemini(prompt: str) -> str:
                     raise  # non-429 error, re-raise immediately
 
     raise last_error  # all models and retries exhausted
+
+
+def _heuristic_score(query: str, candidate: dict) -> dict:
+    """
+    Text-based fallback scorer when Gemini is unavailable.
+    Produces varied scores based on keyword overlap, title relevance, and content richness.
+    """
+    query_lower = query.lower()
+    title = (candidate.get('title') or '').lower()
+    content = (candidate.get('content') or '').lower()
+    full_text = f"{title} {content}"
+
+    # Extract meaningful keywords from the query (3+ chars, no stopwords)
+    stopwords = {'the', 'and', 'for', 'with', 'who', 'that', 'this', 'are', 'was', 'has',
+                 'not', 'but', 'from', 'they', 'been', 'have', 'its', 'can', 'will',
+                 'just', 'our', 'one', 'all', 'their', 'about', 'into', 'some'}
+    query_words = [w for w in re.findall(r'[a-z]+', query_lower) if len(w) >= 3 and w not in stopwords]
+
+    if not query_words:
+        query_words = re.findall(r'[a-z]+', query_lower)
+
+    # --- Signal 1: Keyword overlap (40% weight) ---
+    if query_words:
+        matches = sum(1 for w in query_words if w in full_text)
+        keyword_score = (matches / len(query_words)) * 100
+    else:
+        keyword_score = 50
+
+    # --- Signal 2: Title relevance (35% weight) ---
+    if query_words:
+        title_matches = sum(1 for w in query_words if w in title)
+        title_score = (title_matches / len(query_words)) * 100
+    else:
+        title_score = 50
+
+    # --- Signal 3: Content richness (25% weight) ---
+    content_len = len(content)
+    if content_len > 1000:
+        richness_score = 90
+    elif content_len > 500:
+        richness_score = 70
+    elif content_len > 200:
+        richness_score = 50
+    elif content_len > 50:
+        richness_score = 35
+    else:
+        richness_score = 20
+
+    # Weighted combination
+    raw_score = (keyword_score * 0.40) + (title_score * 0.35) + (richness_score * 0.25)
+
+    # Add small jitter to avoid ties, clamp to 25-95
+    jitter = random.randint(-3, 3)
+    final_score = max(25, min(95, int(raw_score + jitter)))
+
+    # Map score to confidence level
+    if final_score >= 75:
+        confidence = "High"
+    elif final_score >= 50:
+        confidence = "Medium"
+    else:
+        confidence = "Low"
+
+    # Extract matched skills from the query keywords that appear in the content
+    matched_skills = [w.capitalize() for w in query_words if w in full_text][:5]
+    skills_str = ", ".join(matched_skills) if matched_skills else "General Match"
+
+    # Generate a brief reason
+    if final_score >= 75:
+        reason = f"Strong keyword alignment — profile mentions {len(matched_skills)} key terms from your search."
+    elif final_score >= 50:
+        reason = f"Moderate match — some relevant experience found in profile."
+    else:
+        reason = f"Partial match — limited keyword overlap with search criteria."
+
+    return {
+        "score": final_score / 100.0,
+        "match_percentage": final_score,
+        "confidence_level": confidence,
+        "primary_skills": skills_str,
+        "reason": reason,
+        "skill_match_score": final_score,
+        "experience_relevance": max(25, min(95, int(title_score + jitter))),
+        "public_signal_strength": max(25, min(95, int(richness_score + jitter)))
+    }
 
 
 def search_job_candidates(query: str) -> list[dict]:
@@ -226,16 +313,23 @@ def search_job_candidates(query: str) -> list[dict]:
             })
 
     except Exception as e:
-        print(f"Error during AI scoring: {e}")
+        print(f"AI scoring unavailable ({e}), using heuristic fallback...")
         for cand in candidates_to_score:
+            scores = _heuristic_score(query, cand)
             results.append({
                 "title": cand['title'],
                 "url": cand['url'],
                 "content": cand['content'],
-                "score": 0.5,
-                "match_percentage": 50,
-                "primary_skills": "Analysis Failed",
-                "confidence_level": "Low"
+                "score": scores['score'],
+                "match_percentage": scores['match_percentage'],
+                "primary_skills": scores['primary_skills'],
+                "confidence_level": scores['confidence_level'],
+                "match_type": "heuristic_analysis",
+                "skill_match_score": scores['skill_match_score'],
+                "experience_relevance": scores['experience_relevance'],
+                "public_signal_strength": scores['public_signal_strength'],
+                "reason": scores['reason'],
+                "image": cand.get('image')
             })
 
     results.sort(key=lambda x: x["score"], reverse=True)
