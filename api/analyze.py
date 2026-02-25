@@ -102,19 +102,21 @@ def _call_gemini(prompt: str) -> str:
 def _heuristic_score(query: str, candidate: dict) -> dict:
     """
     Text-based fallback scorer when Gemini is unavailable.
-    Produces varied scores based on keyword overlap, title relevance, and content richness.
+    Produces varied scores and personalized analysis per candidate.
     """
     query_lower = query.lower()
-    title = (candidate.get('title') or '').lower()
-    content = (candidate.get('content') or '').lower()
+    title_raw = candidate.get('title') or ''
+    title = title_raw.lower()
+    content_raw = candidate.get('content') or ''
+    content = content_raw.lower()
     full_text = f"{title} {content}"
 
     # Extract meaningful keywords from the query (3+ chars, no stopwords)
     stopwords = {'the', 'and', 'for', 'with', 'who', 'that', 'this', 'are', 'was', 'has',
                  'not', 'but', 'from', 'they', 'been', 'have', 'its', 'can', 'will',
-                 'just', 'our', 'one', 'all', 'their', 'about', 'into', 'some'}
+                 'just', 'our', 'one', 'all', 'their', 'about', 'into', 'some',
+                 'someone', 'wants', 'interested', 'long', 'term', 'ideas', 'stage'}
     query_words = [w for w in re.findall(r'[a-z]+', query_lower) if len(w) >= 3 and w not in stopwords]
-
     if not query_words:
         query_words = re.findall(r'[a-z]+', query_lower)
 
@@ -160,17 +162,46 @@ def _heuristic_score(query: str, candidate: dict) -> dict:
     else:
         confidence = "Low"
 
-    # Extract matched skills from the query keywords that appear in the content
-    matched_skills = [w.capitalize() for w in query_words if w in full_text][:5]
-    skills_str = ", ".join(matched_skills) if matched_skills else "General Match"
+    # --- Extract UNIQUE profile details for personalized analysis ---
 
-    # Generate a brief reason
-    if final_score >= 75:
-        reason = f"Strong keyword alignment — profile mentions {len(matched_skills)} key terms from your search."
-    elif final_score >= 50:
-        reason = f"Moderate match — some relevant experience found in profile."
-    else:
-        reason = f"Partial match — limited keyword overlap with search criteria."
+    # 1. Extract candidate name from title (usually "FirstName LastName - Title | LinkedIn")
+    name = title_raw.split(' - ')[0].split(' | ')[0].split(' – ')[0].strip()
+    if len(name) > 40 or not name:
+        name = "This candidate"
+
+    # 2. Extract companies/organizations mentioned in content
+    known_companies = re.findall(
+        r'(?:at|@|with|from|worked at|working at|currently at)\s+([A-Z][A-Za-z0-9&.\' ]{2,25})',
+        content_raw
+    )
+    # Also try to grab capitalized multi-word names that look like companies
+    if not known_companies:
+        known_companies = re.findall(r'\b([A-Z][a-z]+(?:\s[A-Z][a-z]+)+)\b', content_raw)
+    companies = list(dict.fromkeys(known_companies))[:3]  # dedupe, max 3
+
+    # 3. Extract specific tech skills / tools beyond the query keywords
+    tech_patterns = re.findall(
+        r'\b(Python|Java|JavaScript|TypeScript|React|Angular|Vue|Node\.?js|AWS|Azure|GCP|'
+        r'Docker|Kubernetes|SQL|NoSQL|MongoDB|PostgreSQL|Redis|GraphQL|REST|API|'
+        r'Machine Learning|Deep Learning|AI|NLP|Data Science|TensorFlow|PyTorch|'
+        r'Go|Rust|C\+\+|Swift|Kotlin|Flutter|Django|Flask|Spring|Rails|'
+        r'Figma|Sketch|Product|Design|Agile|Scrum|DevOps|CI/CD|'
+        r'Blockchain|Crypto|Web3|Solidity|Cloud|Microservices|Full.?stack|Backend|Frontend)\b',
+        content_raw, re.IGNORECASE
+    )
+    unique_skills = list(dict.fromkeys([s.capitalize() for s in tech_patterns]))[:6]
+
+    # 4. Extract years of experience if mentioned
+    exp_match = re.findall(r'(\d+)\+?\s*(?:years?|yrs?)\s*(?:of\s+)?(?:experience)?', content, re.IGNORECASE)
+    years_exp = max([int(y) for y in exp_match], default=0) if exp_match else 0
+
+    # 5. Extract matched query keywords for skills display
+    matched_query_skills = [w.capitalize() for w in query_words if w in full_text][:5]
+    all_skills = list(dict.fromkeys(matched_query_skills + unique_skills))[:5]
+    skills_str = ", ".join(all_skills) if all_skills else "General Match"
+
+    # --- Build personalized reason ---
+    reason = _build_personalized_reason(name, companies, unique_skills, years_exp, final_score, query)
 
     return {
         "score": final_score / 100.0,
@@ -182,6 +213,51 @@ def _heuristic_score(query: str, candidate: dict) -> dict:
         "experience_relevance": max(25, min(95, int(title_score + jitter))),
         "public_signal_strength": max(25, min(95, int(richness_score + jitter)))
     }
+
+
+def _build_personalized_reason(name: str, companies: list, skills: list, years_exp: int, score: int, query: str) -> str:
+    """Build a unique, human-readable analysis blurb for a candidate."""
+    parts = []
+
+    # Lead with candidate name
+    if score >= 75:
+        parts.append(f"{name} is a strong match")
+    elif score >= 50:
+        parts.append(f"{name} shows moderate alignment")
+    else:
+        parts.append(f"{name} has limited overlap")
+
+    # Add company context
+    if companies:
+        if len(companies) >= 2:
+            parts.append(f"with experience at {companies[0]} and {companies[1]}")
+        else:
+            parts.append(f"with experience at {companies[0]}")
+
+    # Add years of experience
+    if years_exp > 0:
+        parts.append(f"bringing {years_exp}+ years of experience")
+
+    # Add specific skills
+    if skills:
+        skill_sample = skills[:3]
+        if len(skill_sample) >= 2:
+            parts.append(f"with expertise in {', '.join(skill_sample[:-1])} and {skill_sample[-1]}")
+        else:
+            parts.append(f"skilled in {skill_sample[0]}")
+
+    # Build the sentence
+    reason = ", ".join(parts) + "."
+
+    # Add a closing insight based on score
+    if score >= 85:
+        reason += " Highly recommended for outreach."
+    elif score >= 70:
+        reason += " Worth considering for initial screening."
+    elif score >= 50:
+        reason += " Could be a fit with further evaluation."
+
+    return reason
 
 
 def search_job_candidates(query: str) -> list[dict]:
