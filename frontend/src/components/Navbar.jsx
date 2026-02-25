@@ -46,8 +46,8 @@ const Navbar = () => {
             >
                 {/* Logo */}
                 <Link to="/" style={{ textDecoration: 'none', color: 'inherit' }} onClick={handleNavClick}>
-                    <span style={{ fontSize: '1.5rem', fontWeight: '700', letterSpacing: '-1px' }}>
-                        ScoutAI
+                    <span style={{ fontSize: '1.75rem', fontWeight: '800', letterSpacing: '-1px' }}>
+                        Scout<span style={{ color: '#6366f1' }}>AI</span>
                     </span>
                 </Link>
 

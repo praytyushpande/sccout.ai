@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { ChevronDown } from 'lucide-react';
+
 
 const Hero = ({ onScrollToSearch }) => {
     return (
@@ -56,25 +56,6 @@ const Hero = ({ onScrollToSearch }) => {
                 >
                     Start Scouting
                 </motion.button>
-            </motion.div>
-
-            {/* Scroll indicator */}
-            <motion.div
-                animate={{ y: [0, 10, 0] }}
-                transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
-                style={{
-                    position: 'absolute',
-                    bottom: '3rem',
-                    color: '#a1a1aa',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    alignItems: 'center',
-                    gap: '0.5rem',
-                    fontSize: '0.9rem'
-                }}
-            >
-                <span style={{ letterSpacing: '2px', textTransform: 'uppercase', fontSize: '0.7rem' }}>Scroll Down</span>
-                <ChevronDown size={20} />
             </motion.div>
         </div>
     );
