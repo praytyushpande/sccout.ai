@@ -47,7 +47,11 @@ const Navbar = () => {
                 {/* Logo */}
                 <Link to="/" style={{ textDecoration: 'none', color: 'inherit' }} onClick={handleNavClick}>
                     <span style={{ fontSize: '1.75rem', fontWeight: '800', letterSpacing: '-1px' }}>
-                        Scout<span style={{ color: '#6366f1' }}>AI</span>
+                        Scout<span style={{
+                            background: 'linear-gradient(135deg, #4B2D8C, #6366f1, #a855f7)',
+                            WebkitBackgroundClip: 'text',
+                            WebkitTextFillColor: 'transparent'
+                        }}>AI</span>
                     </span>
                 </Link>
 
