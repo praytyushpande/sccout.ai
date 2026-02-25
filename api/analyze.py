@@ -380,8 +380,19 @@ def search_job_candidates(query: str) -> list[dict]:
     for result in response['results']:
         url_lower = result.get('url', '').lower()
         if 'linkedin.com/in/' in url_lower:
+            # Clean up title: strip " - LinkedIn" suffix and truncate merged names
+            raw_title = result.get('title') or ''
+            # Remove common suffixes
+            clean_title = re.sub(r'\s*[-–|]\s*LinkedIn.*$', '', raw_title, flags=re.IGNORECASE).strip()
+            # If title still looks like merged profiles (very long), take first segment
+            if len(clean_title) > 80:
+                clean_title = clean_title.split(' | ')[0].split(' - ')[0].strip()
+            # Final safety truncation
+            if len(clean_title) > 100:
+                clean_title = clean_title[:97] + '...'
+
             candidates_to_score.append({
-                "title": result.get('title'),
+                "title": clean_title if clean_title else raw_title,
                 "url": result.get('url'),
                 "content": result.get('content'),
                 "image": None

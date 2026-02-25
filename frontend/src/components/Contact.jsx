@@ -36,7 +36,7 @@ const Contact = () => {
                             <p style={{ color: '#6366f1', fontWeight: '600', marginBottom: '1.5rem' }}>Founder & Lead Engineer</p>
 
                             <p style={{ color: '#a1a1aa', lineHeight: '1.6', marginBottom: '2rem' }}>
-                                "I built ScoutAI to solve the noise problem in recruitment. We believe that talent should be recognized by their proof of work, not just keywords on a resume."
+                                "I built ScoutAI at 17 because I watched talented builders get ignored for not having the right college tag. Skills should speak louder than credentials — this is my attempt to fix that."
                             </p>
 
                             <div style={{ display: 'flex', justifyContent: 'center', gap: '1rem' }}>

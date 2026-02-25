@@ -30,7 +30,7 @@ const Hero = ({ onScrollToSearch }) => {
                     WebkitTextFillColor: 'transparent',
                     marginBottom: '2rem'
                 }}>
-                    Find most qualified <br /> people for your work
+                    Hire for what they've built, <br /> not where they studied
                 </h1>
 
                 <p style={{
@@ -40,7 +40,7 @@ const Hero = ({ onScrollToSearch }) => {
                     margin: '0 auto 4rem auto',
                     lineHeight: '1.6'
                 }}>
-                    Stop hiring from PDFs. ScoutAI analyzes thousands of profiles instantly to find your perfect match with proof.
+                    Stop hiring from PDFs. ScoutAI finds builders, makers, and self-taught talent that traditional recruiting completely misses.
                 </p>
 
                 <motion.button
