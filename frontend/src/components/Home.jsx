@@ -64,7 +64,7 @@ function Home() {
             transition={{ duration: 0.6 }}
           >
             {/* Input Section */}
-            <div className="glass-panel" style={{
+            <div className="glass-panel search-panel" style={{
               maxWidth: '900px',
               margin: '0 auto 4rem auto',
               padding: '2rem',
@@ -143,7 +143,7 @@ function Home() {
                 <span style={{ color: '#6366f1' }}>{data.candidates.length}</span> Candidates Found
               </h2>
 
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(380px, 1fr))', gap: '2rem', marginBottom: '4rem' }}>
+              <div className="candidates-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '2rem', marginBottom: '4rem' }}>
                 {data.candidates.map((candidate, idx) => (
                   <motion.div
                     key={idx}

@@ -138,3 +138,214 @@ body {
     opacity: 1;
   }
 }
+
+/* ─── Navbar ─────────────────────────────────────────────────────────── */
+.navbar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  padding: 1.5rem 2rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  z-index: 50;
+}
+
+.nav-links-desktop {
+  border-radius: 50px;
+  padding: 0.5rem 0.75rem;
+  display: flex;
+  gap: 2rem;
+}
+
+.nav-cta-desktop {
+  border-radius: 50px;
+  padding: 0.75rem 1.5rem;
+  color: white;
+  font-weight: 600;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: all 0.3s;
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+}
+
+.nav-cta-desktop:hover {
+  background: rgba(255, 255, 255, 0.1);
+  transform: scale(1.05);
+}
+
+.nav-hamburger {
+  display: none;
+  background: none;
+  border: none;
+  color: white;
+  cursor: pointer;
+  padding: 0.5rem;
+  z-index: 60;
+}
+
+/* Mobile Menu Overlay */
+.mobile-menu-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.95);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  z-index: 55;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.mobile-menu-links {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2rem;
+}
+
+.mobile-menu-link {
+  text-decoration: none;
+  font-size: 1.5rem;
+  font-weight: 600;
+  transition: color 0.2s;
+  padding: 0.5rem 1rem;
+}
+
+.mobile-menu-link:hover {
+  color: #fff !important;
+}
+
+.mobile-menu-cta {
+  margin-top: 1rem;
+  padding: 1rem 3rem;
+  font-size: 1.1rem;
+  border-radius: 50px;
+}
+
+/* ─── Loading spinner ────────────────────────────────────────────────── */
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.loading-spinner {
+  animation: spin 1s linear infinite;
+}
+
+/* ─── Mobile Responsive ──────────────────────────────────────────────── */
+@media (max-width: 768px) {
+
+  /* Navbar */
+  .navbar {
+    padding: 1rem 1.25rem;
+  }
+
+  .nav-links-desktop,
+  .nav-cta-desktop {
+    display: none;
+  }
+
+  .nav-hamburger {
+    display: block;
+  }
+
+  /* Hero */
+  .hero-section h1 {
+    font-size: 2.5rem !important;
+    letter-spacing: -1px !important;
+  }
+
+  /* Container */
+  .container {
+    padding: 0 1rem;
+  }
+
+  /* Candidate Cards Grid — single column on mobile */
+  .candidates-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  /* Candidate Card — stack vertically */
+  .candidate-card {
+    flex-direction: column !important;
+    gap: 1rem !important;
+    padding: 1.25rem !important;
+  }
+
+  .candidate-card img {
+    width: 60px !important;
+    height: 60px !important;
+  }
+
+  .candidate-card h3 {
+    font-size: 1.05rem !important;
+  }
+
+  /* HowItWorks — always stack */
+  .how-step {
+    flex-direction: column !important;
+    gap: 0 !important;
+  }
+
+  .how-step .glass-panel {
+    max-width: 100% !important;
+  }
+
+  /* Contact grid — stack */
+  .contact-grid {
+    grid-template-columns: 1fr !important;
+    gap: 2rem !important;
+  }
+
+  /* Glass panels padding */
+  .glass-panel {
+    padding: 1.25rem;
+  }
+
+  /* Search section */
+  .search-panel {
+    padding: 1.25rem !important;
+    margin-bottom: 2rem !important;
+  }
+
+  .search-panel textarea {
+    min-height: 120px !important;
+    font-size: 0.95rem !important;
+  }
+
+  .search-panel button {
+    padding: 0.75rem 2rem !important;
+    font-size: 0.95rem !important;
+  }
+
+  /* Report section */
+  .analysis-report-section pre {
+    font-size: 0.8rem !important;
+  }
+}
+
+/* Extra small phones */
+@media (max-width: 400px) {
+  .navbar {
+    padding: 0.75rem 1rem;
+  }
+
+  .container {
+    padding: 0 0.75rem;
+  }
+
+  .candidate-card {
+    padding: 1rem !important;
+  }
+
+  .mobile-menu-link {
+    font-size: 1.25rem;
+  }
+}

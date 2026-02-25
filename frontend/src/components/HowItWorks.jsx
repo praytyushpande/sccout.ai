@@ -68,6 +68,7 @@ const HowItWorks = () => {
                     {steps.map((step, idx) => (
                         <motion.div
                             key={idx}
+                            className="how-step"
                             initial={{ opacity: 0, x: idx % 2 === 0 ? -50 : 50 }}
                             whileInView={{ opacity: 1, x: 0 }}
                             viewport={{ once: true, margin: "-50px" }}
