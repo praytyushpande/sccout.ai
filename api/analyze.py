@@ -170,6 +170,16 @@ def _heuristic_score(query: str, candidate: dict) -> dict:
         name = "This candidate"
 
     # 2. Extract companies/organizations mentioned in content
+    # Blocklist of LinkedIn UI artifacts and false positives
+    company_blocklist = {
+        'people also viewed', 'sign in', 'join now', 'linkedin', 'view profile',
+        'show more', 'see all', 'about', 'experience', 'education', 'skills',
+        'activity', 'interests', 'recommendations', 'connections', 'followers',
+        'posts', 'articles', 'more profiles', 'similar profiles', 'mutual connections',
+        'open to work', 'hiring', 'promoted', 'featured', 'premium',
+        'people you may know', 'add to your feed', 'this person', 'their profile'
+    }
+
     known_companies = re.findall(
         r'(?:at|@|with|from|worked at|working at|currently at)\s+([A-Z][A-Za-z0-9&.\' ]{2,25})',
         content_raw
@@ -177,7 +187,15 @@ def _heuristic_score(query: str, candidate: dict) -> dict:
     # Also try to grab capitalized multi-word names that look like companies
     if not known_companies:
         known_companies = re.findall(r'\b([A-Z][a-z]+(?:\s[A-Z][a-z]+)+)\b', content_raw)
-    companies = list(dict.fromkeys(known_companies))[:3]  # dedupe, max 3
+    
+    # Filter out LinkedIn UI artifacts and dedupe
+    companies = []
+    for c in known_companies:
+        c_clean = c.strip()
+        if c_clean.lower() not in company_blocklist and c_clean not in companies and len(c_clean) > 2:
+            companies.append(c_clean)
+        if len(companies) >= 3:
+            break
 
     # 3. Extract specific tech skills / tools beyond the query keywords
     tech_patterns = re.findall(
