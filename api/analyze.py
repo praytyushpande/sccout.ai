@@ -115,7 +115,12 @@ def _heuristic_score(query: str, candidate: dict) -> dict:
     stopwords = {'the', 'and', 'for', 'with', 'who', 'that', 'this', 'are', 'was', 'has',
                  'not', 'but', 'from', 'they', 'been', 'have', 'its', 'can', 'will',
                  'just', 'our', 'one', 'all', 'their', 'about', 'into', 'some',
-                 'someone', 'wants', 'interested', 'long', 'term', 'ideas', 'stage'}
+                 'someone', 'wants', 'interested', 'long', 'term', 'ideas', 'stage',
+                 'looking', 'based', 'out', 'well', 'best', 'cause', 'will', 'also',
+                 'him', 'her', 'his', 'she', 'intern', 'hiring', 'college', 'student',
+                 'need', 'want', 'find', 'good', 'great', 'work', 'job', 'role',
+                 'company', 'team', 'experience', 'year', 'years', 'would', 'like',
+                 'skills', 'skill', 'using', 'used', 'able', 'make', 'working'}
     query_words = [w for w in re.findall(r'[a-z]+', query_lower) if len(w) >= 3 and w not in stopwords]
     if not query_words:
         query_words = re.findall(r'[a-z]+', query_lower)
@@ -154,13 +159,13 @@ def _heuristic_score(query: str, candidate: dict) -> dict:
     jitter = random.randint(-3, 3)
     final_score = max(25, min(95, int(raw_score + jitter)))
 
-    # Map score to confidence level
+    # Map score to confidence level (softer labels)
     if final_score >= 75:
-        confidence = "High"
+        confidence = "Strong Match"
     elif final_score >= 50:
-        confidence = "Medium"
+        confidence = "Good Match"
     else:
-        confidence = "Low"
+        confidence = "Partial Match"
 
     # --- Extract UNIQUE profile details for personalized analysis ---
 
@@ -177,7 +182,12 @@ def _heuristic_score(query: str, candidate: dict) -> dict:
         'activity', 'interests', 'recommendations', 'connections', 'followers',
         'posts', 'articles', 'more profiles', 'similar profiles', 'mutual connections',
         'open to work', 'hiring', 'promoted', 'featured', 'premium',
-        'people you may know', 'add to your feed', 'this person', 'their profile'
+        'people you may know', 'add to your feed', 'this person', 'their profile',
+        'covid', 'pandemic', 'lockdown', 'remote work', 'work from home',
+        'the world', 'new york', 'the best', 'the first', 'the most',
+        'i am', 'i have', 'my name', 'hello', 'hi there', 'welcome',
+        'click here', 'learn more', 'read more', 'see more', 'show all',
+        'sumit pandey', 'people', 'based', 'looking', 'available'
     }
 
     known_companies = re.findall(
@@ -197,26 +207,56 @@ def _heuristic_score(query: str, candidate: dict) -> dict:
         if len(companies) >= 3:
             break
 
-    # 3. Extract specific tech skills / tools beyond the query keywords
+    # 3. Extract specific tech skills / tools / design tools from content
+    # This is the ONLY source of tags — never use raw query words as tags
     tech_patterns = re.findall(
         r'\b(Python|Java|JavaScript|TypeScript|React|Angular|Vue|Node\.?js|AWS|Azure|GCP|'
         r'Docker|Kubernetes|SQL|NoSQL|MongoDB|PostgreSQL|Redis|GraphQL|REST|API|'
         r'Machine Learning|Deep Learning|AI|NLP|Data Science|TensorFlow|PyTorch|'
         r'Go|Rust|C\+\+|Swift|Kotlin|Flutter|Django|Flask|Spring|Rails|'
-        r'Figma|Sketch|Product|Design|Agile|Scrum|DevOps|CI/CD|'
-        r'Blockchain|Crypto|Web3|Solidity|Cloud|Microservices|Full.?stack|Backend|Frontend)\b',
+        r'Figma|Sketch|Adobe XD|Photoshop|Illustrator|InDesign|After Effects|Premiere|'
+        r'UI/?UX|UX|UI|Product Design|Graphic Design|Visual Design|Motion Design|'
+        r'Interaction Design|User Research|Wireframing|Prototyping|Design Systems|'
+        r'Canva|Blender|Cinema 4D|Webflow|Framer|Zeplin|InVision|Miro|'
+        r'Agile|Scrum|DevOps|CI/CD|Git|GitHub|Jira|Confluence|Notion|'
+        r'Blockchain|Crypto|Web3|Solidity|Cloud|Microservices|Full.?stack|Backend|Frontend|'
+        r'SEO|SEM|Google Analytics|Marketing|Content Strategy|Copywriting|'
+        r'Excel|Tableau|Power BI|Salesforce|HubSpot|SAP|ERP|CRM|'
+        r'HTML|CSS|SASS|Tailwind|Bootstrap|WordPress|Shopify|'
+        r'iOS|Android|Mobile|Responsive|Accessibility|WCAG)\b',
         content_raw, re.IGNORECASE
     )
-    unique_skills = list(dict.fromkeys([s.capitalize() for s in tech_patterns]))[:6]
+    # Also check the title for role-specific skills
+    title_skills = re.findall(
+        r'\b(UI/?UX|UX|UI|Graphic Design(?:er)?|Product Design(?:er)?|Visual Design(?:er)?|'
+        r'Frontend|Backend|Full.?stack|Data Scien(?:ce|tist)|Machine Learning|DevOps|'
+        r'Software Engineer|Web Developer|Mobile Developer|Designer|Developer)\b',
+        title_raw, re.IGNORECASE
+    )
+    all_found = tech_patterns + title_skills
+    # Normalize and dedupe
+    skill_normalize = {
+        'ui/ux': 'UI/UX', 'ux': 'UX', 'ui': 'UI', 'graphic designer': 'Graphic Design',
+        'product designer': 'Product Design', 'visual designer': 'Visual Design',
+        'software engineer': 'Software Engineering', 'web developer': 'Web Development',
+        'mobile developer': 'Mobile Development', 'designer': 'Design', 'developer': 'Development',
+    }
+    unique_skills = []
+    seen = set()
+    for s in all_found:
+        normalized = skill_normalize.get(s.lower(), s.capitalize())
+        if normalized.lower() not in seen:
+            seen.add(normalized.lower())
+            unique_skills.append(normalized)
+        if len(unique_skills) >= 5:
+            break
 
     # 4. Extract years of experience if mentioned
     exp_match = re.findall(r'(\d+)\+?\s*(?:years?|yrs?)\s*(?:of\s+)?(?:experience)?', content, re.IGNORECASE)
     years_exp = max([int(y) for y in exp_match], default=0) if exp_match else 0
 
-    # 5. Extract matched query keywords for skills display
-    matched_query_skills = [w.capitalize() for w in query_words if w in full_text][:5]
-    all_skills = list(dict.fromkeys(matched_query_skills + unique_skills))[:5]
-    skills_str = ", ".join(all_skills) if all_skills else "General Match"
+    # 5. Skills display — ONLY real skills, never raw query words
+    skills_str = ", ".join(unique_skills) if unique_skills else "General Match"
 
     # --- Build personalized reason ---
     reason = _build_personalized_reason(name, companies, unique_skills, years_exp, final_score, query)

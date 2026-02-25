@@ -104,11 +104,11 @@ const CandidateCard = ({ candidate, rank }) => {
                         display: 'flex',
                         alignItems: 'center',
                         gap: '0.25rem',
-                        color: candidate.confidence === 'High' ? '#818cf8' :
-                            candidate.confidence === 'Medium' ? '#fbbf24' : '#f87171'
+                        color: candidate.confidence === 'Strong Match' ? '#818cf8' :
+                            candidate.confidence === 'Good Match' ? '#fbbf24' : '#a1a1aa'
                     }}>
                         <CheckCircle size={14} />
-                        {candidate.confidence} Confidence
+                        {candidate.confidence}
                     </span>
                     <span>{candidate.match_percentage}% Match</span>
                 </div>
