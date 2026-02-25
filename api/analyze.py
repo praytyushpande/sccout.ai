@@ -1,5 +1,6 @@
 import os
 import json
+import time
 import requests
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
@@ -12,9 +13,16 @@ from google import genai
 # Load environment variables
 load_dotenv()
 
-# Configure Gemini client
-gemini_client = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
-GEMINI_MODEL = "gemini-2.0-flash"
+# Configure Gemini client (lazy init to avoid crash if key is missing at import)
+_gemini_api_key = os.getenv("GEMINI_API_KEY")
+if not _gemini_api_key:
+    print("WARNING: GEMINI_API_KEY not set. AI analysis will not work.")
+    gemini_client = None
+else:
+    gemini_client = genai.Client(api_key=_gemini_api_key)
+
+# Model fallback chain — if one model's quota is exhausted, try the next
+GEMINI_MODELS = ["gemini-2.0-flash", "gemini-2.0-flash-lite", "gemini-1.5-flash"]
 
 # Initialize Tavily client
 tavily_client = TavilyClient(api_key=os.getenv("TAVILY_API_KEY"))
@@ -59,12 +67,34 @@ class AnalysisResponse(BaseModel):
 # ─── Agent Logic (inlined) ────────────────────────────────────────────
 
 def _call_gemini(prompt: str) -> str:
-    """Helper to call Gemini and return text response."""
-    response = gemini_client.models.generate_content(
-        model=GEMINI_MODEL,
-        contents=prompt
-    )
-    return response.text
+    """Helper to call Gemini with retry + model fallback for 429 errors."""
+    if gemini_client is None:
+        raise RuntimeError("GEMINI_API_KEY is not configured. Set it in environment variables.")
+
+    last_error = None
+    for model in GEMINI_MODELS:
+        for attempt in range(3):
+            try:
+                response = gemini_client.models.generate_content(
+                    model=model,
+                    contents=prompt
+                )
+                return response.text
+            except Exception as e:
+                last_error = e
+                error_str = str(e)
+                if "429" in error_str or "RESOURCE_EXHAUSTED" in error_str:
+                    if attempt < 2:
+                        wait_time = (2 ** attempt) * 2  # 2s, 4s, 8s
+                        print(f"Rate limited on {model} (attempt {attempt+1}/3), retrying in {wait_time}s...")
+                        time.sleep(wait_time)
+                    else:
+                        print(f"Model {model} quota exhausted, trying next model...")
+                        break  # move to next model
+                else:
+                    raise  # non-429 error, re-raise immediately
+
+    raise last_error  # all models and retries exhausted
 
 
 def search_job_candidates(query: str) -> list[dict]:
